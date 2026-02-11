@@ -3,9 +3,16 @@
 import { useRef, useState } from "react";
 import { ARViewer, ARViewerRef } from "./ARViewer";
 
+const MODELS = [
+  { label: "Heavy", url: "/models/heavy.glb" },
+  { label: "Duck", url: "/models/duck.glb" },
+  { label: "BoxAnimated", url: "/models/BoxAnimated.glb" },
+];
+
 export function ARScene() {
   const viewerRef = useRef<ARViewerRef>(null);
   const [autoPlace, setAutoPlace] = useState(false);
+  const [modelUrl, setModelUrl] = useState(MODELS[0].url);
 
   const startAR = (auto: boolean) => {
     setAutoPlace(auto);
@@ -37,6 +44,25 @@ export function ARScene() {
           alignItems: "center",
         }}
       >
+        <select
+          value={modelUrl}
+          onChange={(e) => setModelUrl(e.target.value)}
+          style={{
+            padding: "12px 16px",
+            fontSize: "16px",
+            borderRadius: "12px",
+            border: "2px solid #ccc",
+            backgroundColor: "white",
+            cursor: "pointer",
+            width: "100%",
+          }}
+        >
+          {MODELS.map((m) => (
+            <option key={m.url} value={m.url}>
+              {m.label}
+            </option>
+          ))}
+        </select>
         <button
           onClick={() => startAR(true)}
           style={{ ...buttonStyle, backgroundColor: "#2563eb" }}
@@ -52,7 +78,7 @@ export function ARScene() {
       </div>
       <ARViewer
         ref={viewerRef}
-        modelUrl="/models/heaby.glb"
+        modelUrl={modelUrl}
         autoPlace={autoPlace}
       />
     </div>
