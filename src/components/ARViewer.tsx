@@ -8,7 +8,6 @@ import {
   useImperativeHandle,
   useMemo,
   forwardRef,
-  Suspense,
   Component,
   type ReactNode,
   type ErrorInfo,
@@ -73,19 +72,6 @@ function SceneSetup({ environmentUrl }: { environmentUrl?: string }) {
   return null;
 }
 
-function GpuWarmup({ modelUrl }: { modelUrl: string }) {
-  const { scene } = useGLTF(modelUrl);
-  const { gl, camera } = useThree();
-  const compiledRef = useRef(false);
-
-  useEffect(() => {
-    if (compiledRef.current) return;
-    compiledRef.current = true;
-    gl.compile(scene, camera);
-  }, [gl, scene, camera]);
-
-  return null;
-}
 
 export interface ARViewerRef {
   activateAR: () => Promise<void>;
@@ -343,9 +329,6 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(
           )}
         <ARErrorBoundary onError={handleRenderError}>
           <Canvas style={{ width: "100%", height: "100%" }}>
-            <Suspense fallback={null}>
-              <GpuWarmup modelUrl={modelUrl} />
-            </Suspense>
             <XR store={store}>
               <SceneSetup environmentUrl="/environment.hdr" />
               <HitTest
