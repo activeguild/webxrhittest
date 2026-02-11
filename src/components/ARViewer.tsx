@@ -8,6 +8,7 @@ import {
   useImperativeHandle,
   useMemo,
   forwardRef,
+  Suspense,
   Component,
   type ReactNode,
   type ErrorInfo,
@@ -50,8 +51,8 @@ class ARErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> 
   }
 }
 
-function SceneSetup({ environmentUrl, modelUrl }: { environmentUrl?: string; modelUrl?: string }) {
-  const { gl, scene, camera } = useThree();
+function SceneSetup({ environmentUrl }: { environmentUrl?: string }) {
+  const { gl, scene } = useThree();
   const initRef = useRef(false);
 
   useEffect(() => {
@@ -69,14 +70,19 @@ function SceneSetup({ environmentUrl, modelUrl }: { environmentUrl?: string; mod
     }
   }, [gl, scene, environmentUrl]);
 
-  // Pre-compile model shaders on GPU to avoid stutter on first render
+  return null;
+}
+
+function GpuWarmup({ modelUrl }: { modelUrl: string }) {
+  const { scene } = useGLTF(modelUrl);
+  const { gl, camera } = useThree();
+  const compiledRef = useRef(false);
+
   useEffect(() => {
-    if (!modelUrl) return;
-    const gltf = useGLTF.getState?.(modelUrl);
-    if (gltf?.scene) {
-      gl.compile(gltf.scene, camera);
-    }
-  }, [gl, camera, modelUrl]);
+    if (compiledRef.current) return;
+    compiledRef.current = true;
+    gl.compile(scene, camera);
+  }, [gl, scene, camera]);
 
   return null;
 }
@@ -337,8 +343,11 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(
           )}
         <ARErrorBoundary onError={handleRenderError}>
           <Canvas style={{ width: "100%", height: "100%" }}>
+            <Suspense fallback={null}>
+              <GpuWarmup modelUrl={modelUrl} />
+            </Suspense>
             <XR store={store}>
-              <SceneSetup environmentUrl="/environment.hdr" modelUrl={modelUrl} />
+              <SceneSetup environmentUrl="/environment.hdr" />
               <HitTest
                 modelUrl={modelUrl}
                 autoPlace={autoPlace}
