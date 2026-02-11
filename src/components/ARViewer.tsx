@@ -19,6 +19,7 @@ import {
   EquirectangularReflectionMapping,
 } from "three";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+import { useProgress, useGLTF } from "@react-three/drei";
 import { createXRStore, XR } from "@react-three/xr";
 import { HitTest } from "./HitTest";
 
@@ -101,6 +102,12 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(
     const containerRef = useRef<HTMLDivElement>(null);
     const [session, setSession] = useState<XRSession | null>(null);
     const [isTracking, setIsTracking] = useState(false);
+    const { active: loading, progress } = useProgress();
+
+    // Preload model on mount
+    useEffect(() => {
+      useGLTF.preload(modelUrl);
+    }, [modelUrl]);
 
     // Create overlay element and XR store once per instance
     const { overlayEl, store } = useMemo(() => {
@@ -198,7 +205,7 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(
               >
                 ✕
               </button>
-              {!isTracking && (
+              {!isTracking && !loading && (
                 <div
                   style={{
                     position: "absolute",
@@ -238,6 +245,54 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(
                       50% { transform: translateX(20px); }
                     }`}
                   </style>
+                </div>
+              )}
+              {loading && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    backgroundColor: "rgba(200, 200, 200, 0.6)",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "12px",
+                  }}
+                >
+                  <p
+                    style={{
+                      color: "#333",
+                      fontSize: "14px",
+                      margin: 0,
+                      fontWeight: "bold",
+                    }}
+                  >
+                    読み込み中... {Math.round(progress)}%
+                  </p>
+                  <div
+                    style={{
+                      width: "60%",
+                      maxWidth: "240px",
+                      height: "6px",
+                      backgroundColor: "rgba(0, 0, 0, 0.2)",
+                      borderRadius: "3px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: `${progress}%`,
+                        height: "100%",
+                        backgroundColor: "#2563eb",
+                        borderRadius: "3px",
+                        transition: "width 0.2s ease",
+                      }}
+                    />
+                  </div>
                 </div>
               )}
             </>,
