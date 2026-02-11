@@ -102,7 +102,35 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(
     const containerRef = useRef<HTMLDivElement>(null);
     const [session, setSession] = useState<XRSession | null>(null);
     const [isTracking, setIsTracking] = useState(false);
-    const { active: loading, progress } = useProgress();
+    const { active: rawLoading, progress: rawProgress } = useProgress();
+    const displayProgressRef = useRef(0);
+    const [showLoading, setShowLoading] = useState(false);
+    const [displayProgress, setDisplayProgress] = useState(0);
+
+    // Only allow progress to increase, never decrease
+    useEffect(() => {
+      if (rawLoading) {
+        setShowLoading(true);
+        if (rawProgress > displayProgressRef.current) {
+          displayProgressRef.current = rawProgress;
+          setDisplayProgress(rawProgress);
+        }
+      }
+    }, [rawLoading, rawProgress]);
+
+    // When loading finishes, show 100% briefly then hide
+    useEffect(() => {
+      if (!rawLoading && showLoading) {
+        displayProgressRef.current = 100;
+        setDisplayProgress(100);
+        const timer = setTimeout(() => {
+          setShowLoading(false);
+          displayProgressRef.current = 0;
+          setDisplayProgress(0);
+        }, 600);
+        return () => clearTimeout(timer);
+      }
+    }, [rawLoading, showLoading]);
 
     // Preload model on mount
     useEffect(() => {
@@ -205,7 +233,7 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(
               >
                 ✕
               </button>
-              {!isTracking && !loading && (
+              {!isTracking && !showLoading && (
                 <div
                   style={{
                     position: "absolute",
@@ -247,7 +275,7 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(
                   </style>
                 </div>
               )}
-              {loading && (
+              {showLoading && (
                 <div
                   style={{
                     position: "absolute",
@@ -271,7 +299,7 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(
                       fontWeight: "bold",
                     }}
                   >
-                    ARを読み込んでいます。 {Math.round(progress)}%
+                    ARを読み込んでいます。 {Math.round(displayProgress)}%
                   </p>
                   <div
                     style={{
@@ -285,7 +313,7 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(
                   >
                     <div
                       style={{
-                        width: `${progress}%`,
+                        width: `${displayProgress}%`,
                         height: "100%",
                         backgroundColor: "#2563eb",
                         borderRadius: "3px",

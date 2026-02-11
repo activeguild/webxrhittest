@@ -3,6 +3,10 @@
 import { useRef, useState, useEffect, useCallback, Suspense } from "react";
 import {
   Group,
+  Mesh,
+  RingGeometry,
+  MeshBasicMaterial,
+  DoubleSide,
   Matrix4,
   Vector3,
   Quaternion,
@@ -12,9 +16,7 @@ import {
 } from "three";
 import { useThree } from "@react-three/fiber";
 import { useXRHitTest, useXR } from "@react-three/xr";
-import { Reticle } from "./Reticle";
 import { PlacedModel } from "./PlacedModel";
-import { LoadingIndicator } from "./LoadingIndicator";
 
 const matrixHelper = new Matrix4();
 const positionHelper = new Vector3();
@@ -53,9 +55,9 @@ interface HitTestProps {
 }
 
 export function HitTest({ modelUrl = "/models/duck.glb", autoPlace = false, onTrackingChange }: HitTestProps) {
-  const { camera } = useThree();
+  const { camera, scene } = useThree();
   const wasTrackingRef = useRef(false);
-  const reticleRef = useRef<Group>(null);
+  const reticleRef = useRef<Mesh | null>(null);
   const modelRef = useRef<Group>(null);
   const currentPositionRef = useRef(new Vector3());
   const currentQuaternionRef = useRef(new Quaternion());
@@ -65,7 +67,6 @@ export function HitTest({ modelUrl = "/models/duck.glb", autoPlace = false, onTr
   } | null>(null);
   const isHittingRef = useRef(false);
   const autoPlacedRef = useRef(false);
-  const placedRef = useRef(false);
 
   const [scale, setScale] = useState(DEFAULT_SCALE);
   const scaleRef = useRef(DEFAULT_SCALE);
@@ -89,26 +90,55 @@ export function HitTest({ modelUrl = "/models/duck.glb", autoPlace = false, onTr
   } | null>(null);
   const skipSelectCountRef = useRef(0);
 
-  // Sync placed state to ref for use in hit test callback
+  // Create reticle as a raw Three.js object (bypasses R3F reconciler)
   useEffect(() => {
-    placedRef.current = placed !== null;
+    const geometry = new RingGeometry(0.04, 0.06, 32);
+    geometry.rotateX(-Math.PI / 2);
+    const material = new MeshBasicMaterial({
+      color: 0xffffff,
+      opacity: 0.8,
+      transparent: true,
+      side: DoubleSide,
+    });
+    const mesh = new Mesh(geometry, material);
+    mesh.visible = false;
+    reticleRef.current = mesh;
+    scene.add(mesh);
+    return () => {
+      scene.remove(mesh);
+      geometry.dispose();
+      material.dispose();
+      reticleRef.current = null;
+    };
+  }, [scene]);
+
+  // Hide reticle when model is placed, show when removed
+  useEffect(() => {
+    if (reticleRef.current) {
+      if (placed) {
+        reticleRef.current.visible = false;
+      }
+    }
   }, [placed]);
 
-  // Hit test for reticle only
+  // Hit test: always track position, update reticle visual only if it exists
   useXRHitTest(
     (results, getWorldMatrix) => {
-      if (results.length > 0 && reticleRef.current) {
+      if (results.length > 0) {
         getWorldMatrix(matrixHelper, results[0]);
         matrixHelper.decompose(positionHelper, quaternionHelper, scaleHelper);
-
-        reticleRef.current.position.copy(positionHelper);
-        reticleRef.current.quaternion.copy(quaternionHelper);
-        // Hide reticle when model is already placed
-        reticleRef.current.visible = !placedRef.current;
 
         currentPositionRef.current.copy(positionHelper);
         currentQuaternionRef.current.copy(quaternionHelper);
         isHittingRef.current = true;
+
+        if (reticleRef.current && !reticleRef.current.visible) {
+          reticleRef.current.visible = true;
+        }
+        if (reticleRef.current) {
+          reticleRef.current.position.copy(positionHelper);
+          reticleRef.current.quaternion.copy(quaternionHelper);
+        }
 
         if (!wasTrackingRef.current) {
           wasTrackingRef.current = true;
@@ -122,8 +152,7 @@ export function HitTest({ modelUrl = "/models/duck.glb", autoPlace = false, onTr
             });
           }
         }
-      } else if (reticleRef.current) {
-        reticleRef.current.visible = false;
+      } else {
         isHittingRef.current = false;
 
         if (wasTrackingRef.current) {
@@ -300,9 +329,6 @@ export function HitTest({ modelUrl = "/models/duck.glb", autoPlace = false, onTr
 
   return (
     <>
-      <group ref={reticleRef} visible={false}>
-        <Reticle />
-      </group>
       {placed && (
         <Suspense
           fallback={
