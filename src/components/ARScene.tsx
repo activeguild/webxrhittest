@@ -28,7 +28,7 @@ export function ARScene() {
       >
         AR を開始
       </button>
-      <ARViewer ref={viewerRef} modelUrl="/models/BoxAnimated.glb" />
+      <ARViewer ref={viewerRef} modelUrl="/models/BoxAnimated.glb" autoPlace={true} />
     </div>
   );
 }

@@ -65,6 +65,7 @@ export function HitTest({ modelUrl = "/models/duck.glb", autoPlace = false, onTr
   } | null>(null);
   const isHittingRef = useRef(false);
   const autoPlacedRef = useRef(false);
+  const placedRef = useRef(false);
 
   const [scale, setScale] = useState(DEFAULT_SCALE);
   const scaleRef = useRef(DEFAULT_SCALE);
@@ -88,6 +89,11 @@ export function HitTest({ modelUrl = "/models/duck.glb", autoPlace = false, onTr
   } | null>(null);
   const skipSelectCountRef = useRef(0);
 
+  // Sync placed state to ref for use in hit test callback
+  useEffect(() => {
+    placedRef.current = placed !== null;
+  }, [placed]);
+
   // Hit test for reticle only
   useXRHitTest(
     (results, getWorldMatrix) => {
@@ -97,7 +103,8 @@ export function HitTest({ modelUrl = "/models/duck.glb", autoPlace = false, onTr
 
         reticleRef.current.position.copy(positionHelper);
         reticleRef.current.quaternion.copy(quaternionHelper);
-        reticleRef.current.visible = true;
+        // Hide reticle when model is already placed
+        reticleRef.current.visible = !placedRef.current;
 
         currentPositionRef.current.copy(positionHelper);
         currentQuaternionRef.current.copy(quaternionHelper);

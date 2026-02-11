@@ -90,7 +90,7 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(
     {
       modelUrl = "/models/duck.glb",
       guideImageUrl = "/mobile.svg",
-      guideText = "平面にカメラをかざしてください",
+      guideText = "平面にカメラをかざして左右に動かしてください",
       autoPlace = false,
       onSessionStart,
       onSessionEnd,
