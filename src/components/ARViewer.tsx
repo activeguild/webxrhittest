@@ -10,9 +10,36 @@ import {
   forwardRef,
 } from "react";
 import { createPortal } from "react-dom";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
+import {
+  NoToneMapping,
+  EquirectangularReflectionMapping,
+} from "three";
+import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 import { createXRStore, XR } from "@react-three/xr";
 import { HitTest } from "./HitTest";
+
+function SceneSetup({ environmentUrl }: { environmentUrl?: string }) {
+  const { gl, scene } = useThree();
+  const initRef = useRef(false);
+
+  useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
+
+    // eslint-disable-next-line react-hooks/immutability
+    gl.toneMapping = NoToneMapping;
+
+    if (environmentUrl) {
+      new RGBELoader().load(environmentUrl, (texture) => {
+        texture.mapping = EquirectangularReflectionMapping;
+        scene.environment = texture;
+      });
+    }
+  }, [gl, scene, environmentUrl]);
+
+  return null;
+}
 
 export interface ARViewerRef {
   activateAR: () => Promise<void>;
@@ -56,6 +83,7 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(
       const xrStore = createXRStore({
         hitTest: true,
         domOverlay: el || true,
+        transientPointer: false,
       });
 
       return { overlayEl: el, store: xrStore };
@@ -162,8 +190,7 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(
           )}
         <Canvas style={{ width: "100%", height: "100%" }}>
           <XR store={store}>
-            <ambientLight intensity={0.5} />
-            <directionalLight position={[5, 5, 5]} intensity={1} />
+            <SceneSetup environmentUrl="/environment.hdr" />
             <HitTest
               modelUrl={modelUrl}
               onTrackingChange={handleTrackingChange}
