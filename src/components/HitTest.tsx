@@ -91,7 +91,9 @@ export function HitTest({ modelUrl = "/models/duck.glb", autoPlace = false, onTr
   const skipSelectCountRef = useRef(0);
 
   // Create reticle as a raw Three.js object (bypasses R3F reconciler)
+  // Skip creation in autoPlace mode
   useEffect(() => {
+    if (autoPlace) return;
     const geometry = new RingGeometry(0.04, 0.06, 32);
     geometry.rotateX(-Math.PI / 2);
     const material = new MeshBasicMaterial({
@@ -110,7 +112,7 @@ export function HitTest({ modelUrl = "/models/duck.glb", autoPlace = false, onTr
       material.dispose();
       reticleRef.current = null;
     };
-  }, [scene]);
+  }, [scene, autoPlace]);
 
   // Hide reticle when model is placed, show when removed
   useEffect(() => {
