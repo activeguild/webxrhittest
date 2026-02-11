@@ -50,8 +50,8 @@ class ARErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> 
   }
 }
 
-function SceneSetup({ environmentUrl }: { environmentUrl?: string }) {
-  const { gl, scene } = useThree();
+function SceneSetup({ environmentUrl, modelUrl }: { environmentUrl?: string; modelUrl?: string }) {
+  const { gl, scene, camera } = useThree();
   const initRef = useRef(false);
 
   useEffect(() => {
@@ -68,6 +68,15 @@ function SceneSetup({ environmentUrl }: { environmentUrl?: string }) {
       });
     }
   }, [gl, scene, environmentUrl]);
+
+  // Pre-compile model shaders on GPU to avoid stutter on first render
+  useEffect(() => {
+    if (!modelUrl) return;
+    const gltf = useGLTF.getState?.(modelUrl);
+    if (gltf?.scene) {
+      gl.compile(gltf.scene, camera);
+    }
+  }, [gl, camera, modelUrl]);
 
   return null;
 }
@@ -329,7 +338,7 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(
         <ARErrorBoundary onError={handleRenderError}>
           <Canvas style={{ width: "100%", height: "100%" }}>
             <XR store={store}>
-              <SceneSetup environmentUrl="/environment.hdr" />
+              <SceneSetup environmentUrl="/environment.hdr" modelUrl={modelUrl} />
               <HitTest
                 modelUrl={modelUrl}
                 autoPlace={autoPlace}

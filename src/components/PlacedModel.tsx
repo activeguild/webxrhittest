@@ -27,6 +27,7 @@ export const PlacedModel = forwardRef<Group, PlacedModelProps>(
     const { actions } = useAnimations(clonedAnimations, animRef as any);
 
     const currentScaleRef = useRef(0);
+    const introDoneRef = useRef(false);
     const primitiveRef = useRef<Object3D>(null);
 
     useEffect(() => {
@@ -36,18 +37,32 @@ export const PlacedModel = forwardRef<Group, PlacedModelProps>(
       });
     }, [actions]);
 
-    // Smooth scale-in animation
+    // Initial scale-in animation only; after that scale is set directly
     useFrame((_, delta) => {
       if (!primitiveRef.current) return;
-      const speed = 5;
-      currentScaleRef.current = MathUtils.lerp(
-        currentScaleRef.current,
-        scale,
-        1 - Math.exp(-speed * delta)
-      );
-      const s = currentScaleRef.current;
-      primitiveRef.current.scale.set(s, s, s);
+      if (!introDoneRef.current) {
+        const speed = 5;
+        currentScaleRef.current = MathUtils.lerp(
+          currentScaleRef.current,
+          scale,
+          1 - Math.exp(-speed * delta)
+        );
+        if (scale - currentScaleRef.current < 0.001) {
+          currentScaleRef.current = scale;
+          introDoneRef.current = true;
+        }
+        const s = currentScaleRef.current;
+        primitiveRef.current.scale.set(s, s, s);
+      }
     });
+
+    // After intro, apply scale changes immediately
+    useEffect(() => {
+      if (introDoneRef.current && primitiveRef.current) {
+        currentScaleRef.current = scale;
+        primitiveRef.current.scale.set(scale, scale, scale);
+      }
+    }, [scale]);
 
     return (
       <group ref={ref} position={position} quaternion={quaternion}>
