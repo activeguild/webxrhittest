@@ -1,8 +1,9 @@
 "use client";
 
-import { forwardRef, useEffect, useRef } from "react";
+import { forwardRef, useEffect, useRef, useMemo } from "react";
 import { useGLTF, useAnimations } from "@react-three/drei";
 import { Quaternion as ThreeQuaternion, Vector3, Group } from "three";
+import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
 
 interface PlacedModelProps {
   modelUrl: string;
@@ -15,9 +16,13 @@ interface PlacedModelProps {
 export const PlacedModel = forwardRef<Group, PlacedModelProps>(
   function PlacedModel({ modelUrl, position, quaternion, scale, rotationY }, ref) {
     const { scene, animations } = useGLTF(modelUrl);
-    const clonedScene = scene.clone();
+    const clonedScene = useMemo(() => SkeletonUtils.clone(scene), [scene]);
+    const clonedAnimations = useMemo(
+      () => animations.map((clip) => clip.clone()),
+      [animations]
+    );
     const animRef = useRef<Group>(null);
-    const { actions } = useAnimations(animations, animRef);
+    const { actions } = useAnimations(clonedAnimations, animRef);
 
     useEffect(() => {
       if (!actions) return;

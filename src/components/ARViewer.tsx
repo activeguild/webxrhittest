@@ -8,6 +8,9 @@ import {
   useImperativeHandle,
   useMemo,
   forwardRef,
+  Component,
+  type ReactNode,
+  type ErrorInfo,
 } from "react";
 import { createPortal } from "react-dom";
 import { Canvas, useThree } from "@react-three/fiber";
@@ -18,6 +21,33 @@ import {
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 import { createXRStore, XR } from "@react-three/xr";
 import { HitTest } from "./HitTest";
+
+interface ErrorBoundaryProps {
+  onError?: (error: Error) => void;
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
+
+class ARErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false };
+
+  static getDerivedStateFromError(): ErrorBoundaryState {
+    return { hasError: true };
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  componentDidCatch(error: Error, _info: ErrorInfo) {
+    this.props.onError?.(error);
+  }
+
+  render() {
+    if (this.state.hasError) return null;
+    return this.props.children;
+  }
+}
 
 function SceneSetup({ environmentUrl }: { environmentUrl?: string }) {
   const { gl, scene } = useThree();
@@ -49,8 +79,10 @@ export interface ARViewerProps {
   modelUrl?: string;
   guideImageUrl?: string;
   guideText?: string;
+  autoPlace?: boolean;
   onSessionStart?: () => void;
   onSessionEnd?: () => void;
+  onError?: (error: Error) => void;
 }
 
 export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(
@@ -59,8 +91,10 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(
       modelUrl = "/models/duck.glb",
       guideImageUrl = "/mobile.svg",
       guideText = "平面にカメラをかざしてください",
+      autoPlace = false,
       onSessionStart,
       onSessionEnd,
+      onError,
     },
     ref
   ) {
@@ -84,6 +118,10 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(
         hitTest: true,
         domOverlay: el || true,
         transientPointer: false,
+        controller: false,
+        hand: false,
+        gaze: false,
+        screenInput: false,
       });
 
       return { overlayEl: el, store: xrStore };
@@ -100,17 +138,34 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(
     }, []);
 
     const activateAR = useCallback(async () => {
-      const sess = await store.enterAR();
-      if (sess) {
-        setSession(sess);
-        onSessionStart?.();
-        sess.addEventListener("end", () => {
-          setSession(null);
-          setIsTracking(false);
-          onSessionEnd?.();
-        });
+      try {
+        const sess = await store.enterAR();
+        if (sess) {
+          setSession(sess);
+          onSessionStart?.();
+          sess.addEventListener("end", () => {
+            setSession(null);
+            setIsTracking(false);
+            onSessionEnd?.();
+          });
+        }
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error(String(err));
+        setSession(null);
+        setIsTracking(false);
+        onError?.(error);
       }
-    }, [store, onSessionStart, onSessionEnd]);
+    }, [store, onSessionStart, onSessionEnd, onError]);
+
+    const handleRenderError = useCallback(
+      (error: Error) => {
+        session?.end();
+        setSession(null);
+        setIsTracking(false);
+        onError?.(error);
+      },
+      [session, onError]
+    );
 
     useImperativeHandle(ref, () => ({ activateAR }), [activateAR]);
 
@@ -188,15 +243,18 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(
             </>,
             overlayEl
           )}
-        <Canvas style={{ width: "100%", height: "100%" }}>
-          <XR store={store}>
-            <SceneSetup environmentUrl="/environment.hdr" />
-            <HitTest
-              modelUrl={modelUrl}
-              onTrackingChange={handleTrackingChange}
-            />
-          </XR>
-        </Canvas>
+        <ARErrorBoundary onError={handleRenderError}>
+          <Canvas style={{ width: "100%", height: "100%" }}>
+            <XR store={store}>
+              <SceneSetup environmentUrl="/environment.hdr" />
+              <HitTest
+                modelUrl={modelUrl}
+                autoPlace={autoPlace}
+                onTrackingChange={handleTrackingChange}
+              />
+            </XR>
+          </Canvas>
+        </ARErrorBoundary>
       </div>
     );
   }

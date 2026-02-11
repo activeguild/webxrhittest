@@ -48,10 +48,11 @@ function getAngle(touches: TouchList) {
 
 interface HitTestProps {
   modelUrl?: string;
+  autoPlace?: boolean;
   onTrackingChange?: (tracking: boolean) => void;
 }
 
-export function HitTest({ modelUrl = "/models/duck.glb", onTrackingChange }: HitTestProps) {
+export function HitTest({ modelUrl = "/models/duck.glb", autoPlace = false, onTrackingChange }: HitTestProps) {
   const { camera } = useThree();
   const wasTrackingRef = useRef(false);
   const reticleRef = useRef<Group>(null);
@@ -63,6 +64,7 @@ export function HitTest({ modelUrl = "/models/duck.glb", onTrackingChange }: Hit
     quaternion: Quaternion;
   } | null>(null);
   const isHittingRef = useRef(false);
+  const autoPlacedRef = useRef(false);
 
   const [scale, setScale] = useState(DEFAULT_SCALE);
   const scaleRef = useRef(DEFAULT_SCALE);
@@ -104,6 +106,14 @@ export function HitTest({ modelUrl = "/models/duck.glb", onTrackingChange }: Hit
         if (!wasTrackingRef.current) {
           wasTrackingRef.current = true;
           onTrackingChange?.(true);
+
+          if (autoPlace && !autoPlacedRef.current) {
+            autoPlacedRef.current = true;
+            setPlaced({
+              position: positionHelper.clone(),
+              quaternion: quaternionHelper.clone(),
+            });
+          }
         }
       } else if (reticleRef.current) {
         reticleRef.current.visible = false;
@@ -144,6 +154,7 @@ export function HitTest({ modelUrl = "/models/duck.glb", onTrackingChange }: Hit
       setRotationY(0);
       rotationYRef.current = 0;
       wasTrackingRef.current = false;
+      autoPlacedRef.current = false;
     }
   }, [session]);
 
