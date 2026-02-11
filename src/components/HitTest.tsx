@@ -306,9 +306,10 @@ export function HitTest({ modelUrl = "/models/duck.glb", autoPlace = false, onTr
       {placed && (
         <Suspense
           fallback={
-            <group position={placed.position} quaternion={placed.quaternion}>
-              <LoadingIndicator />
-            </group>
+            // <group position={placed.position} quaternion={placed.quaternion}>
+            //   <LoadingIndicator />
+            // </group>
+            <></>
           }
         >
           <PlacedModel
