@@ -271,7 +271,7 @@ export const ARViewer = forwardRef<ARViewerRef, ARViewerProps>(
                       fontWeight: "bold",
                     }}
                   >
-                    読み込み中... {Math.round(progress)}%
+                    ARを読み込んでいます。 {Math.round(progress)}%
                   </p>
                   <div
                     style={{
