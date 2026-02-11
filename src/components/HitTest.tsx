@@ -47,10 +47,11 @@ function getAngle(touches: TouchList) {
 }
 
 interface HitTestProps {
+  modelUrl?: string;
   onTrackingChange?: (tracking: boolean) => void;
 }
 
-export function HitTest({ onTrackingChange }: HitTestProps) {
+export function HitTest({ modelUrl = "/models/duck.glb", onTrackingChange }: HitTestProps) {
   const { camera } = useThree();
   const wasTrackingRef = useRef(false);
   const reticleRef = useRef<Group>(null);
@@ -294,6 +295,7 @@ export function HitTest({ onTrackingChange }: HitTestProps) {
         >
           <PlacedModel
             ref={modelRef}
+            modelUrl={modelUrl}
             position={placed.position}
             quaternion={placed.quaternion}
             scale={scale}

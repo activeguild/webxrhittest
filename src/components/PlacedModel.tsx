@@ -5,6 +5,7 @@ import { useGLTF } from "@react-three/drei";
 import { Quaternion as ThreeQuaternion, Vector3, Group } from "three";
 
 interface PlacedModelProps {
+  modelUrl: string;
   position: Vector3;
   quaternion: ThreeQuaternion;
   scale: number;
@@ -12,8 +13,8 @@ interface PlacedModelProps {
 }
 
 export const PlacedModel = forwardRef<Group, PlacedModelProps>(
-  function PlacedModel({ position, quaternion, scale, rotationY }, ref) {
-    const { scene } = useGLTF("/models/duck.glb");
+  function PlacedModel({ modelUrl, position, quaternion, scale, rotationY }, ref) {
+    const { scene } = useGLTF(modelUrl);
     const clonedScene = scene.clone();
 
     return (
@@ -27,5 +28,3 @@ export const PlacedModel = forwardRef<Group, PlacedModelProps>(
     );
   }
 );
-
-useGLTF.preload("/models/duck.glb");
